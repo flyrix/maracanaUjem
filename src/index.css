@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+
+html, body, #root { height: 100%; }
+body {
+  @apply bg-pitch-deep text-chalk font-sans antialiased;
+  /* lignes de craie du terrain, très discrètes */
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 100% 96px, 96px 100%;
+}
+
+:focus-visible { outline: 3px solid #FF6B1A; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+@layer components {
+  .board {
+    @apply bg-pitch border border-white/10 rounded-xl;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-display text-lg tracking-wide
+           uppercase transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary { @apply btn bg-flame text-ink hover:bg-orange-500; }
+  .btn-ghost { @apply btn border border-white/20 text-chalk hover:bg-white/5; }
+  .field {
+    @apply w-full rounded-lg bg-black/25 border border-white/15 px-3 py-2.5 text-chalk
+           placeholder:text-chalk/35 focus:border-flame;
+  }
+  .label { @apply block text-sm text-chalk/65 mb-1.5; }
+  .score { @apply font-num text-6xl leading-none tabular-nums; }
+}
