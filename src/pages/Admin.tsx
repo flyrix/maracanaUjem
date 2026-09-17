@@ -46,6 +46,18 @@ export default function Admin() {
     void recharger()
   }
 
+  async function togglerPhasePoules() {
+    if (!tournoi) return
+    if (tournoi.phase_poules_ouverte) {
+      const sur = window.confirm(
+        'Clore la phase de poules ? Plus aucun mercenaire ne pourra être ajouté après cette action.'
+      )
+      if (!sur) return
+    }
+    await supabase.from('tournois').update({ phase_poules_ouverte: !tournoi.phase_poules_ouverte }).eq('id', tournoi.id)
+    void recharger()
+  }
+
   async function programmer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
@@ -95,6 +107,26 @@ export default function Admin() {
             S'applique aux matchs qui n'ont pas encore démarré leur chronomètre. Un match déjà lancé
             garde la durée qui était réglée à son ouverture jusqu'au rechargement de la console.
           </p>
+        </section>
+      )}
+
+      {tournoi && (
+        <section>
+          <h2 className="mb-2 font-display text-xl">Mercenaires</h2>
+          <div className="board flex items-center justify-between gap-3 p-4">
+            <p className="text-sm">
+              Chaque club peut engager jusqu'à 4 mercenaires, uniquement pendant la phase de poules.
+              {tournoi.phase_poules_ouverte
+                ? ' La phase est actuellement ouverte : les clubs peuvent en ajouter.'
+                : ' La phase est close : plus aucun mercenaire ne peut être ajouté.'}
+            </p>
+            <button
+              className={tournoi.phase_poules_ouverte ? 'btn-ghost shrink-0' : 'btn-primary shrink-0'}
+              onClick={togglerPhasePoules}
+            >
+              {tournoi.phase_poules_ouverte ? 'Clore la phase de poules' : 'Rouvrir la phase de poules'}
+            </button>
+          </div>
         </section>
       )}
 

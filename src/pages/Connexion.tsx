@@ -12,7 +12,7 @@ export default function Connexion() {
     e.preventDefault()
     const { error } = await supabase.auth.signInWithPassword({ email, password: motDePasse })
     if (error) return setErreur("Identifiants refusés. Vérifiez l'adresse et le mot de passe.")
-    naviguer('/admin')
+    naviguer('/espace')
   }
 
   return (

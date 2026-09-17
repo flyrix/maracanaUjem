@@ -11,6 +11,7 @@ export interface Tournoi {
   id: string; nom: string; saison: string | null; lieu: string | null
   duree_periode_sec: number; nb_periodes: number
   duree_carton_bleu_sec: number; max_joueurs_par_equipe: number; actif: boolean
+  phase_poules_ouverte: boolean
 }
 
 export interface Equipe {
@@ -24,6 +25,7 @@ export interface Equipe {
 export interface Membre {
   id: string; equipe_id: string; nom: string; role: MemberRole
   photo_url: string; qr_token: string; licence_num: string | null; actif: boolean
+  est_mercenaire: boolean
   empreinte_faciale?: number[] | null
 }
 
@@ -46,21 +48,6 @@ export interface Evenement {
 
 /** Événement en attente de synchronisation (mode hors-ligne). */
 export interface EvenementLocal extends Omit<Evenement, 'id' | 'cree_le'> {
-  cree_le: string
-  synchronise: 0 | 1
-}
-
-export interface SuppressionLocale {
-  client_uuid: string
-  match_id: string
-  cree_le: string
-  synchronise: 0 | 1
-}
-
-export interface MajMatchLocale {
-  id: string
-  match_id: string
-  patch: Partial<Pick<Match, 'statut' | 'chrono_demarre_a' | 'chrono_offset_sec' | 'periode'>>
   cree_le: string
   synchronise: 0 | 1
 }

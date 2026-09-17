@@ -14,6 +14,7 @@ export const REGLES = {
   cumulFautesCollectives: false,
   cartonBleuSecondes: 120,
   maxJoueurs: 10,
+  maxMercenaires: 4,
   maxPresidents: 1,
   maxEntraineurs: 1
 } as const
