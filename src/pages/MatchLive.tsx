@@ -12,7 +12,8 @@ export default function MatchLive() {
   const { id } = useParams()
   const { match, evenements, connecte } = useMatchLive(id)
   const [tournoi, setTournoi] = useState<Tournoi | null>(null)
-  const secondes = useChrono(match, tournoi?.duree_periode_sec)
+  const dureeMaxSec = tournoi && match ? tournoi.duree_periode_sec * match.periode : undefined
+  const secondes = useChrono(match, dureeMaxSec)
   const [equipes, setEquipes] = useState<Record<string, Equipe>>({})
   const [membres, setMembres] = useState<Record<string, Membre>>({})
 

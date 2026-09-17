@@ -35,7 +35,10 @@ export default function ConsolePCO() {
   const { profil } = useAuth()
   const { match, evenements } = useMatchLive(id)
   const [tournoi, setTournoi] = useState<Tournoi | null>(null)
-  const secondes = useChrono(match, tournoi?.duree_periode_sec)
+  // Le chrono est cumulé sur tout le match : la 2e période continue là où la 1re s'est arrêtée,
+  // comme sur un vrai terrain. Chaque période ajoute donc `duree_periode_sec` au plafond d'affichage.
+  const dureeMaxSec = tournoi && match ? tournoi.duree_periode_sec * match.periode : undefined
+  const secondes = useChrono(match, dureeMaxSec)
   const [equipes, setEquipes] = useState<Equipe[]>([])
   const [membres, setMembres] = useState<Membre[]>([])
   const [action, setAction] = useState<Action | null>(null)
@@ -64,26 +67,28 @@ export default function ConsolePCO() {
   const surnoms = useMemo(() => membres.map(m => m.nom), [membres])
 
   // Fin de période automatique : le chrono s'arrête dès que la durée
-  // réglementaire est atteinte, sans attendre un clic sur Pause.
-  const periodeEcoulee = !!(tournoi && match?.statut === 'en_cours' && secondes >= tournoi.duree_periode_sec)
+  // réglementaire cumulée est atteinte, sans attendre un clic sur Pause.
+  const periodeEcoulee = !!(dureeMaxSec && match?.statut === 'en_cours' && secondes >= dureeMaxSec)
   const derniereePeriode = !!(tournoi && match && match.periode >= tournoi.nb_periodes)
   const enAttenteNouvellePeriode = !!(
-    tournoi && match && match.statut === 'pause' &&
-    match.chrono_offset_sec >= tournoi.duree_periode_sec &&
+    tournoi && match && dureeMaxSec && match.statut === 'pause' &&
+    match.chrono_offset_sec >= dureeMaxSec &&
     match.periode < tournoi.nb_periodes
   )
 
   useEffect(() => {
-    if (!periodeEcoulee || !match || !tournoi) return
+    if (!periodeEcoulee || !match || !dureeMaxSec) return
     void supabase.from('matchs').update({
-      statut: 'pause', chrono_demarre_a: null, chrono_offset_sec: tournoi.duree_periode_sec
+      statut: 'pause', chrono_demarre_a: null, chrono_offset_sec: dureeMaxSec
     }).eq('id', match.id)
   }, [periodeEcoulee])
 
   async function periodeSuivante() {
     if (!match) return
+    // On repart du plafond de la période qui vient de s'écouler : le chrono continue,
+    // il ne revient pas à zéro (ex. 25:00 → 50:00 pour la 2e période).
     await supabase.from('matchs').update({
-      periode: match.periode + 1, chrono_offset_sec: 0,
+      periode: match.periode + 1, chrono_offset_sec: match.chrono_offset_sec,
       chrono_demarre_a: new Date().toISOString(), statut: 'en_cours'
     }).eq('id', match.id)
   }
@@ -168,7 +173,7 @@ export default function ConsolePCO() {
           <div className="board flex items-center justify-between gap-3 border-flame bg-flame/10 p-3">
             <p className="text-sm">
               Fin de la {match.periode}<sup>{match.periode === 1 ? 're' : 'e'}</sup> période
-              — le chrono est arrêté à {tournoi!.duree_periode_sec / 60} min.
+              — le chrono est arrêté à {Math.round(match.chrono_offset_sec / 60)} min.
             </p>
             <button className="btn-primary shrink-0 py-2" onClick={periodeSuivante}>
               Lancer la {match.periode + 1}<sup>e</sup> période
@@ -188,7 +193,7 @@ export default function ConsolePCO() {
           <button className="btn-ghost" onClick={terminer}><Flag size={20} />Fin</button>
         </div>
 
-        {derniereePeriode && match.statut === 'pause' && match.chrono_offset_sec >= (tournoi?.duree_periode_sec ?? Infinity) && (
+        {derniereePeriode && match.statut === 'pause' && dureeMaxSec && match.chrono_offset_sec >= dureeMaxSec && (
           <p className="text-sm text-chalk/60">
             Dernière période écoulée. Cliquez sur <strong>Fin</strong> pour clôturer le match.
           </p>
