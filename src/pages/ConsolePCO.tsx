@@ -70,11 +70,13 @@ export default function ConsolePCO() {
   // réglementaire cumulée est atteinte, sans attendre un clic sur Pause.
   const periodeEcoulee = !!(dureeMaxSec && match?.statut === 'en_cours' && secondes >= dureeMaxSec)
   const derniereePeriode = !!(tournoi && match && match.periode >= tournoi.nb_periodes)
-  const enAttenteNouvellePeriode = !!(
-    tournoi && match && dureeMaxSec && match.statut === 'pause' &&
-    match.chrono_offset_sec >= dureeMaxSec &&
-    match.periode < tournoi.nb_periodes
+  // Vrai dès que le match est arrêté pile à la fin d'une période — la 1re comme la dernière.
+  // Le bouton Lancer reste verrouillé tant qu'on est dans ce cas : reprendre le chrono n'a plus
+  // de sens ici, il faut soit lancer la période suivante, soit clôturer le match.
+  const periodeVerrouillee = !!(
+    dureeMaxSec && match?.statut === 'pause' && match.chrono_offset_sec >= dureeMaxSec
   )
+  const enAttenteNouvellePeriode = !!(tournoi && match && periodeVerrouillee && match.periode < tournoi.nb_periodes)
 
   useEffect(() => {
     if (!periodeEcoulee || !match || !dureeMaxSec) return
@@ -184,7 +186,7 @@ export default function ConsolePCO() {
         <div className="grid grid-cols-3 gap-2">
           {match.statut === 'en_cours'
             ? <button className="btn-ghost" onClick={() => chronometre(false)}><Pause size={20} />Pause</button>
-            : <button className="btn-primary" onClick={() => chronometre(true)} disabled={enAttenteNouvellePeriode}>
+            : <button className="btn-primary" onClick={() => chronometre(true)} disabled={periodeVerrouillee}>
                 <Play size={20} />Lancer
               </button>}
           <button className="btn-ghost" onClick={dicter} disabled={ecoute}>
@@ -193,7 +195,7 @@ export default function ConsolePCO() {
           <button className="btn-ghost" onClick={terminer}><Flag size={20} />Fin</button>
         </div>
 
-        {derniereePeriode && match.statut === 'pause' && dureeMaxSec && match.chrono_offset_sec >= dureeMaxSec && (
+        {derniereePeriode && periodeVerrouillee && (
           <p className="text-sm text-chalk/60">
             Dernière période écoulée. Cliquez sur <strong>Fin</strong> pour clôturer le match.
           </p>

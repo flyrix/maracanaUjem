@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { Blason } from '@/components/Blason'
+import { LigneMatch } from '@/components/LigneMatch'
 import type { Equipe, Match } from '@/lib/types'
 
 export default function Accueil() {
@@ -19,6 +18,18 @@ export default function Accueil() {
       setEquipes(Object.fromEntries(((e.data as Equipe[]) ?? []).map(x => [x.id, x])))
       setChargement(false)
     })()
+  }, [])
+
+  // Garde le fil à jour sans recharger la page : score et minuteur des matchs
+  // en cours suivent la table de marque en direct.
+  useEffect(() => {
+    const canal = supabase
+      .channel('accueil-matchs')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matchs' }, p => {
+        setMatchs(prev => prev.map(m => (m.id === (p.new as Match).id ? (p.new as Match) : m)))
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(canal) }
   }, [])
 
   const enCours = matchs.filter(m => m.statut === 'en_cours' || m.statut === 'pause')
@@ -46,55 +57,23 @@ export default function Accueil() {
           <h2 className="mb-3 flex items-center gap-2 font-display text-2xl">
             <span className="h-2.5 w-2.5 rounded-full bg-flame" /> Ça joue maintenant
           </h2>
-          <div className="space-y-2">{enCours.map(m => <Ligne key={m.id} match={m} equipes={equipes} />)}</div>
+          <div className="space-y-2">{enCours.map(m => <LigneMatch key={m.id} match={m} equipes={equipes} />)}</div>
         </section>
       )}
 
       {aVenir.length > 0 && (
         <section>
           <h2 className="mb-3 font-display text-2xl">Prochaines rencontres</h2>
-          <div className="space-y-2">{aVenir.map(m => <Ligne key={m.id} match={m} equipes={equipes} />)}</div>
+          <div className="space-y-2">{aVenir.map(m => <LigneMatch key={m.id} match={m} equipes={equipes} />)}</div>
         </section>
       )}
 
       {joues.length > 0 && (
         <section>
           <h2 className="mb-3 font-display text-2xl">Déjà jouées</h2>
-          <div className="space-y-2">{joues.map(m => <Ligne key={m.id} match={m} equipes={equipes} />)}</div>
+          <div className="space-y-2">{joues.map(m => <LigneMatch key={m.id} match={m} equipes={equipes} />)}</div>
         </section>
       )}
-    </div>
-  )
-}
-
-function Ligne({ match, equipes }: { match: Match; equipes: Record<string, Equipe> }) {
-  const dom = equipes[match.equipe_dom]
-  const ext = equipes[match.equipe_ext]
-  if (!dom || !ext) return null
-  const heure = match.debut_prevu
-    ? new Date(match.debut_prevu).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
-    : 'Horaire à confirmer'
-
-  return (
-    <Link to={`/match/${match.id}`} className="board flex items-center gap-3 p-3 hover:border-flame/50">
-      <div className="min-w-0 flex-1 space-y-2">
-        <Camp equipe={dom} score={match.score_dom} gagne={match.score_dom > match.score_ext && match.statut === 'termine'} />
-        <Camp equipe={ext} score={match.score_ext} gagne={match.score_ext > match.score_dom && match.statut === 'termine'} />
-      </div>
-      <div className="shrink-0 border-l border-white/10 pl-3 text-right text-xs text-chalk/55">
-        {match.statut === 'en_cours' ? <span className="text-flame">Direct</span> : heure}
-        {match.terrain && <div>{match.terrain}</div>}
-      </div>
-    </Link>
-  )
-}
-
-function Camp({ equipe, score, gagne }: { equipe: Equipe; score: number; gagne: boolean }) {
-  return (
-    <div className={`flex items-center gap-2.5 ${gagne ? '' : 'text-chalk/85'}`}>
-      <Blason equipe={equipe} taille={22} />
-      <span className="min-w-0 flex-1 truncate">{equipe.nom}</span>
-      <span className="font-num text-2xl tabular-nums">{score}</span>
     </div>
   )
 }

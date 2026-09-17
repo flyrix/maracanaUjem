@@ -5,8 +5,9 @@ import { useMatchLive } from '@/hooks/useMatchLive'
 import { useChrono } from '@/hooks/useChrono'
 import { Tableau } from '@/components/Tableau'
 import { CartonBleu } from '@/components/CartonBleu'
+import { LigneMatch } from '@/components/LigneMatch'
 import { EVENEMENTS } from '@/lib/rules'
-import type { Equipe, Membre, Tournoi } from '@/lib/types'
+import type { Equipe, Membre, Tournoi, Match } from '@/lib/types'
 
 export default function MatchLive() {
   const { id } = useParams()
@@ -16,6 +17,14 @@ export default function MatchLive() {
   const secondes = useChrono(match, dureeMaxSec)
   const [equipes, setEquipes] = useState<Record<string, Equipe>>({})
   const [membres, setMembres] = useState<Record<string, Membre>>({})
+
+  // Historique des deux équipes : confrontations directes en priorité, sinon
+  // les derniers matchs de chacune — à la manière d'un onglet H2H de Sofascore.
+  const [h2h, setH2h] = useState<Match[]>([])
+  const [recentsDom, setRecentsDom] = useState<Match[]>([])
+  const [recentsExt, setRecentsExt] = useState<Match[]>([])
+  const [equipesHistorique, setEquipesHistorique] = useState<Record<string, Equipe>>({})
+  const [historiqueCharge, setHistoriqueCharge] = useState(false)
 
   useEffect(() => {
     if (!match) return
@@ -32,6 +41,46 @@ export default function MatchLive() {
     })()
   }, [match?.id])
 
+  useEffect(() => {
+    const dom = equipes[match?.equipe_dom ?? '']
+    const ext = equipes[match?.equipe_ext ?? '']
+    if (!match || !dom || !ext) return
+    ;(async () => {
+      const { data: h2hData } = await supabase.from('matchs').select('*')
+        .eq('statut', 'termine').neq('id', match.id)
+        .or(`and(equipe_dom.eq.${dom.id},equipe_ext.eq.${ext.id}),and(equipe_dom.eq.${ext.id},equipe_ext.eq.${dom.id})`)
+        .order('debut_prevu', { ascending: false }).limit(10)
+      const listeH2h = (h2hData as Match[]) ?? []
+
+      let listeDom: Match[] = []
+      let listeExt: Match[] = []
+      if (listeH2h.length === 0) {
+        const [{ data: rd }, { data: re }] = await Promise.all([
+          supabase.from('matchs').select('*').eq('statut', 'termine').neq('id', match.id)
+            .or(`equipe_dom.eq.${dom.id},equipe_ext.eq.${dom.id}`)
+            .order('debut_prevu', { ascending: false }).limit(5),
+          supabase.from('matchs').select('*').eq('statut', 'termine').neq('id', match.id)
+            .or(`equipe_dom.eq.${ext.id},equipe_ext.eq.${ext.id}`)
+            .order('debut_prevu', { ascending: false }).limit(5)
+        ])
+        listeDom = (rd as Match[]) ?? []
+        listeExt = (re as Match[]) ?? []
+      }
+
+      const idsAdverses = new Set<string>()
+      ;[...listeH2h, ...listeDom, ...listeExt].forEach(m => { idsAdverses.add(m.equipe_dom); idsAdverses.add(m.equipe_ext) })
+      const manquants = [...idsAdverses].filter(x => !equipes[x])
+      let extra: Record<string, Equipe> = {}
+      if (manquants.length) {
+        const { data: eq } = await supabase.from('equipes').select('*').in('id', manquants)
+        extra = Object.fromEntries(((eq as Equipe[]) ?? []).map(x => [x.id, x]))
+      }
+
+      setH2h(listeH2h); setRecentsDom(listeDom); setRecentsExt(listeExt)
+      setEquipesHistorique(extra); setHistoriqueCharge(true)
+    })()
+  }, [match?.id, equipes])
+
   if (!match) return <p className="p-6 text-chalk/60">Chargement du match…</p>
   const dom = equipes[match.equipe_dom]
   const ext = equipes[match.equipe_ext]
@@ -40,6 +89,7 @@ export default function MatchLive() {
   const exclusions = evenements.filter(
     e => e.type === 'carton_bleu' && e.expire_a && new Date(e.expire_a) > new Date()
   )
+  const equipesFusion = { ...equipes, ...equipesHistorique }
 
   return (
     <div className="space-y-5 p-4 md:p-6">
@@ -88,6 +138,40 @@ export default function MatchLive() {
           <p className="whitespace-pre-line leading-relaxed text-chalk/85">{match.resume_ia}</p>
           <p className="mt-3 text-xs text-chalk/40">Rédigé par l'assistant du tournoi ({match.resume_ia_style}).</p>
         </section>
+      )}
+
+      {historiqueCharge && (
+        h2h.length > 0 ? (
+          <section>
+            <h2 className="mb-2 font-display text-xl">Confrontations directes</h2>
+            <div className="space-y-2">
+              {h2h.map(m => <LigneMatch key={m.id} match={m} equipes={equipesFusion} />)}
+            </div>
+          </section>
+        ) : recentsDom.length > 0 || recentsExt.length > 0 ? (
+          <>
+            {recentsDom.length > 0 && (
+              <section>
+                <h2 className="mb-2 font-display text-xl">Derniers matchs — {dom.nom}</h2>
+                <div className="space-y-2">
+                  {recentsDom.map(m => <LigneMatch key={m.id} match={m} equipes={equipesFusion} />)}
+                </div>
+              </section>
+            )}
+            {recentsExt.length > 0 && (
+              <section>
+                <h2 className="mb-2 font-display text-xl">Derniers matchs — {ext.nom}</h2>
+                <div className="space-y-2">
+                  {recentsExt.map(m => <LigneMatch key={m.id} match={m} equipes={equipesFusion} />)}
+                </div>
+              </section>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-chalk/45">
+            Pas encore d'historique : ce sera le premier match référencé pour ces deux équipes.
+          </p>
+        )
       )}
     </div>
   )
