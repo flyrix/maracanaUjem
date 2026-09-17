@@ -19,7 +19,7 @@ export function Tableau({ match, dom, ext, secondes }: {
 
       <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="flex flex-col items-center gap-2 text-center">
-          <Blason equipe={dom} taille={48} />
+          <Blason equipe={dom} taille={40} />
           <span className="font-display text-xl leading-tight">{dom.nom}</span>
         </div>
         <div className="text-center">
@@ -28,7 +28,7 @@ export function Tableau({ match, dom, ext, secondes }: {
           <div className="text-xs text-chalk/50">{match.periode}<sup>{match.periode === 1 ? 're' : 'e'}</sup> période</div>
         </div>
         <div className="flex flex-col items-center gap-2 text-center">
-          <Blason equipe={ext} taille={48} />
+          <Blason equipe={ext} taille={40} />
           <span className="font-display text-xl leading-tight">{ext.nom}</span>
         </div>
       </div>

@@ -6,12 +6,13 @@ import { useChrono } from '@/hooks/useChrono'
 import { Tableau } from '@/components/Tableau'
 import { CartonBleu } from '@/components/CartonBleu'
 import { EVENEMENTS } from '@/lib/rules'
-import type { Equipe, Membre } from '@/lib/types'
+import type { Equipe, Membre, Tournoi } from '@/lib/types'
 
 export default function MatchLive() {
   const { id } = useParams()
   const { match, evenements, connecte } = useMatchLive(id)
-  const secondes = useChrono(match)
+  const [tournoi, setTournoi] = useState<Tournoi | null>(null)
+  const secondes = useChrono(match, tournoi?.duree_periode_sec)
   const [equipes, setEquipes] = useState<Record<string, Equipe>>({})
   const [membres, setMembres] = useState<Record<string, Membre>>({})
 
@@ -19,12 +20,14 @@ export default function MatchLive() {
     if (!match) return
     ;(async () => {
       const ids = [match.equipe_dom, match.equipe_ext]
-      const [e, m] = await Promise.all([
+      const [e, m, t] = await Promise.all([
         supabase.from('equipes').select('*').in('id', ids),
-        supabase.from('v_membres_public').select('*').in('equipe_id', ids)
+        supabase.from('membres').select('*').in('equipe_id', ids),
+        supabase.from('tournois').select('*').eq('id', match.tournoi_id).single()
       ])
       setEquipes(Object.fromEntries(((e.data as Equipe[]) ?? []).map(x => [x.id, x])))
       setMembres(Object.fromEntries(((m.data as Membre[]) ?? []).map(x => [x.id, x])))
+      setTournoi(t.data as Tournoi)
     })()
   }, [match?.id])
 

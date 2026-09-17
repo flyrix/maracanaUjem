@@ -17,7 +17,7 @@ export function blasonSVG(nom: string, primaire = '#0B3B2E', secondaire = '#FF6B
   const p = couleurSure(primaire, '#0B3B2E')
   const s = couleurSure(secondaire, '#FF6B1A')
   const petit = ini.length > 1 ? 34 : 44
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110" width="100" height="110">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 110" width="100" height="110" style="width:100%;height:100%;display:block" preserveAspectRatio="xMidYMid meet">
   <path d="M6 6h88v58c0 22-19 33-44 40C25 97 6 86 6 64Z" fill="${p}"/>
   <path d="M6 6h88v58c0 22-19 33-44 40C25 97 6 86 6 64Z" fill="none" stroke="${s}" stroke-width="4"/>
   <path d="M6 62h88" stroke="${s}" stroke-width="3" opacity=".65"/>

@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom'
 import { FileDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Blason } from '@/components/Blason'
-import { genererPlancheLicences, telecharger } from '@/lib/licences'
 import { useAuth } from '@/hooks/useAuth'
 import type { Equipe, Membre, Tournoi } from '@/lib/types'
 
@@ -35,6 +34,7 @@ export default function EquipeDetail() {
     if (membres.some(m => !m.qr_token)) return
     setEnCours(true)
     try {
+      const { genererPlancheLicences, telecharger } = await import('@/lib/licences')
       const blob = await genererPlancheLicences(tournoi, equipe, membres)
       telecharger(blob, `licences-${equipe.nom.toLowerCase().replace(/\s+/g, '-')}.pdf`)
     } finally { setEnCours(false) }
@@ -48,7 +48,7 @@ export default function EquipeDetail() {
   return (
     <div className="space-y-6 p-4 md:p-6">
       <header className="flex items-center gap-4">
-        <Blason equipe={equipe} taille={64} />
+        <Blason equipe={equipe} taille={48} />
         <div>
           <h1 className="font-display text-3xl leading-tight">{equipe.nom}</h1>
           <p className="text-chalk/55">{equipe.quartier ?? '—'} · {membres.length} membres</p>

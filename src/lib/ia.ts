@@ -24,7 +24,16 @@ async function appelIA<T>(tache: Tache, donnees: unknown): Promise<T> {
     },
     body: JSON.stringify({ tache, donnees })
   })
-  if (!r.ok) throw new Error(`Agent IA indisponible (${r.status}).`)
+  if (!r.ok) {
+    let detail = ''
+    try {
+      const data = await r.json()
+      detail = typeof data?.erreur === 'string' ? ` ${data.erreur}` : ''
+    } catch {
+      detail = ` ${await r.text()}`
+    }
+    throw new Error(`Agent IA indisponible (${r.status}).${detail}`)
+  }
   return (await r.json()) as T
 }
 

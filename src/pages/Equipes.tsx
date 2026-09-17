@@ -23,7 +23,7 @@ export default function Equipes() {
           {equipes.map(e => (
             <li key={e.id}>
               <Link to={`/equipe/${e.id}`} className="board flex items-center gap-3 p-3 hover:border-flame/50">
-                <Blason equipe={e} taille={44} />
+                <Blason equipe={e} taille={34} />
                 <span className="min-w-0">
                   <span className="block truncate font-display text-xl">{e.nom}</span>
                   <span className="text-sm text-chalk/55">{e.quartier ?? 'Quartier non précisé'}</span>
